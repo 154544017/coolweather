@@ -4,6 +4,7 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
 import android.preference.PreferenceManager;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -28,6 +29,9 @@ import okhttp3.Callback;
 import okhttp3.Response;
 
 public class WeatherActivity extends AppCompatActivity {
+    private SwipeRefreshLayout swipeRefreshLayout;
+
+    private String mWeatherId;
 
     //background bing image
     private ImageView bingPicImg;
@@ -62,6 +66,7 @@ public class WeatherActivity extends AppCompatActivity {
         }
         setContentView(R.layout.activity_weather);
 
+        swipeRefreshLayout = findViewById(R.id.swipe_refresh);
         //初始化各种控件
         weatherLayout = findViewById(R.id.weather_layout);
         //title
@@ -86,11 +91,12 @@ public class WeatherActivity extends AppCompatActivity {
         String weatherString = prefs.getString("weather",null);
         if(weatherString!=null){
             Weather weather =Utility.handleWeatherResponse(weatherString);
+            mWeatherId = weather.basic.weatherId;
             showWeatherInfo(weather);
         }else{
-            String weatherId = getIntent().getStringExtra("weather_id");
+            mWeatherId = getIntent().getStringExtra("weather_id");
             weatherLayout.setVisibility(View.INVISIBLE);
-            requestWeather(weatherId);
+            requestWeather(mWeatherId);
         }
         //load background image
         String bingPic = prefs.getString("bing_pic",null);
@@ -99,10 +105,18 @@ public class WeatherActivity extends AppCompatActivity {
         }else{
             loadBingPic();
         }
+        //swipe refresh
+        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                requestWeather(mWeatherId);
+            }
+        });
     }
 
     //根据天气id来获取城市天气信息
     public void requestWeather(final String weatherId){
+        loadBingPic();
         String weatherUrl = "http://guolin.tech/api/weather?cityid="
                 +weatherId+"&key=e7d509a1bb354330ab92bae7c622e4ef";
         HttpUtil.sendOkHttpRequest(weatherUrl, new Callback() {
@@ -114,15 +128,16 @@ public class WeatherActivity extends AppCompatActivity {
                     public void run() {
                         Toast.makeText(WeatherActivity.this,"获取天气信息失败",
                                 Toast.LENGTH_SHORT).show();
+                        swipeRefreshLayout.setRefreshing(false);
                     }
                 });
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-
                 final String responseText = response.body().string();
                 final Weather weather = Utility.handleWeatherResponse(responseText);
+
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -132,11 +147,13 @@ public class WeatherActivity extends AppCompatActivity {
                                     edit();
                             editor.putString("weather",responseText);
                             editor.apply();
+                            mWeatherId = weather.basic.weatherId;
                             showWeatherInfo(weather);
                         }else{
                             Toast.makeText(WeatherActivity.this,"获取天气信息失败",
                                     Toast.LENGTH_SHORT).show();
                         }
+                        swipeRefreshLayout.setRefreshing(false);
                     }
                 });
             }
