@@ -1,9 +1,12 @@
 package com.coolweather.android;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
 import android.preference.PreferenceManager;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -19,6 +22,7 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 import com.coolweather.android.gson.ForeCast;
 import com.coolweather.android.gson.Weather;
+import com.coolweather.android.service.AutoUpdateService;
 import com.coolweather.android.util.HttpUtil;
 import com.coolweather.android.util.Utility;
 
@@ -29,8 +33,9 @@ import okhttp3.Callback;
 import okhttp3.Response;
 
 public class WeatherActivity extends AppCompatActivity {
-    private SwipeRefreshLayout swipeRefreshLayout;
-
+    public SwipeRefreshLayout swipeRefreshLayout;
+    public DrawerLayout drawerLayout;
+    private Button navButton;
     private String mWeatherId;
 
     //background bing image
@@ -39,7 +44,7 @@ public class WeatherActivity extends AppCompatActivity {
     private ScrollView weatherLayout;
     //title
     private TextView titleCity;
-    private TextView titleUpdataTime;
+    private TextView titleUpdateTime;
     //now
     private TextView degreeText;
     private TextView weatherInfoText;
@@ -67,11 +72,13 @@ public class WeatherActivity extends AppCompatActivity {
         setContentView(R.layout.activity_weather);
 
         swipeRefreshLayout = findViewById(R.id.swipe_refresh);
+        drawerLayout = findViewById(R.id.drawer_layout);
+        navButton = findViewById(R.id.nav_button);
         //初始化各种控件
         weatherLayout = findViewById(R.id.weather_layout);
         //title
         titleCity = findViewById(R.id.title_city);
-        titleUpdataTime = findViewById(R.id.title_update_time);
+        titleUpdateTime = findViewById(R.id.title_update_time);
         //now
         degreeText = findViewById(R.id.degree_text);
         weatherInfoText = findViewById(R.id.weather_info_text);
@@ -110,6 +117,13 @@ public class WeatherActivity extends AppCompatActivity {
             @Override
             public void onRefresh() {
                 requestWeather(mWeatherId);
+            }
+        });
+        //nav button
+        navButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                drawerLayout.openDrawer(GravityCompat.START);
             }
         });
     }
@@ -168,7 +182,7 @@ public class WeatherActivity extends AppCompatActivity {
         String degree = weather.now.temperature + "℃";
         String weatherInfo = weather.now.more.info;
         titleCity.setText(cityName);
-        titleUpdataTime.setText(updateTime);
+        titleUpdateTime.setText(updateTime);
         degreeText.setText(degree);
         weatherInfoText.setText(weatherInfo);
         //forecast
@@ -197,7 +211,10 @@ public class WeatherActivity extends AppCompatActivity {
         carWashText.setText(carWash);
         sportText.setText(sport);
         weatherLayout.setVisibility(View.VISIBLE);
+        Intent intent = new Intent(this, AutoUpdateService.class);
+        startService(intent);
     }
+
     //load bing background picture
     public void loadBingPic(){
         String requestBingPic = "http://guolin.tech/api/bing_pic";
